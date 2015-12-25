@@ -62,11 +62,39 @@ float GOP::Solution::getScore(const NodeSet& nodes){
 	// TODO set score function
 	float sum = 0;
 	for (int node : path){
-		sum += nodes.getScore(node, 0);
-
+		for (int i = 0; i < nodes.num_score_elmts; ++i){
+			sum += nodes.getScore(node, i) / nodes.num_score_elmts;	
+		}
 	}
+	score = sum;
 
 	return sum;
+}
+
+void GOP::Solution::two_opt(const EdgeSet& edges){
+	/* (2-opt algorithm) While there are edges (a,b), (c,d) in S s.t. d(a,b) + d(c,d) > d(a,c) + d(b,d), 
+		remove edges (a,b) and (c,d) from S and add edges (a,c) and (b,d) to S. */
+
+	int a, b, c, d; float dab, dcd, dac, dbd; bool changed; int n = path.size();
+	do {
+		changed = false;
+		for (int i = 0; i < n - 2; ++i){
+			for (int j = i + 1; j < n - 1; ++j){
+				a = path[i]; b = path[i+1];
+				c = path[j]; d = path[j+1];
+
+				dab = edges.getLength(a, b); dcd = edges.getLength(c, d);
+				dac = edges.getLength(a, c); dbd = edges.getLength(b, d);
+
+				if (dab + dcd > dac + dbd){
+					distance = distance - dab - dcd + dac + dbd;
+					path[i+1] = c; path[j] = b;
+					changed = true;
+				}
+			}
+		}
+
+	} while(changed);
 }
 
 void GOP::Solution::process_gop(int par_i, int par_t, const NodeSet& nodes, const EdgeSet& edges, int start, int end){
@@ -80,34 +108,36 @@ void GOP::Solution::process_gop(int par_i, int par_t, const NodeSet& nodes, cons
 
 	// 2. Initialize solution S to contain the single node s
 	path.push_back(start);
-	int last = start; float last_distance = 0.0;
+	float last_distance = 0.0;
 	int available_nodes = nodes.num_nodes - 1;
 
 	// 3. While adding node e to the end of S would not cause the length of S to exceed the distance limit l.
-	while (distance + edges.getLength(last, end) <= distance_budget){
+	while (distance + edges.getLength(path.back(), end) <= distance_budget){
 		int node;
 		/* (a) Randomly select i nodes (with repeats allowed), s.t. each is not in S and each is not e.
 		 	Store these i nodes in set L. If all nodes except e have been added	to S, then add e to the end and return the final solution.*/
 		if (available_nodes == 1){
 			path.push_back(end);
-			distance += edges.getLength(last, end);
+			distance += edges.getLength(path.back(), end);
 			return;
 		} else {
+			L.clear();
 			for (int i = 0; i < par_i; ++i){
 				do{
 					node = rand() % nodes.num_nodes;
 				} while((node == end) || (std::find(path.begin(), path.end(), node) != path.end()));
+
 				L.insert(node);
 			}
 		}
 
-		/* (b) If z is the last vertex in S, then select b in L s.t. ∀q in L, d(z,b) + d(b,e) <= d(z,q) + d(q,e). */
+		/* (b) If z is the last vertex in S, then select b in L s.t. for all q in L, d(z,b) + d(b,e) <= d(z,q) + d(q,e). */
 		auto b = L.begin(); node = *b;
-		float min_dis = edges.getLength(last, node) + edges.getLength(node, end); ++b;
+		last_distance = edges.getLength(path.back(), node) + edges.getLength(node, end); ++b;
 		while (b != L.end()){
-			float dis = edges.getLength(last, *b) + edges.getLength(*b, end);
-			if (dis < min_dis){
-				min_dis = dis;
+			float dis = edges.getLength(path.back(), *b) + edges.getLength(*b, end);
+			if (dis < last_distance){
+				last_distance = dis;
 				node = *b;
 			}
 			++b;
@@ -115,14 +145,17 @@ void GOP::Solution::process_gop(int par_i, int par_t, const NodeSet& nodes, cons
 
 		/* (c) Add b to the end of S. */
 		path.push_back(node);
-		last_distance = min_dis;
 		distance += last_distance;
 		--available_nodes;
 	}
 
 	// 4. Replace the last vertex in S with e.
-	path.pop_back(); last = path.back(); path.push_back(end);
-	distance -= last_distance; last_distance = edges.getLength(last, end); distance += last_distance;
+	path.pop_back(); 
+	distance = distance - last_distance + edges.getLength(path.back(), end);
+	path.push_back(end);
+
+	/* 5. 2-opt algorithm */
+	two_opt(edges);
 }
 
 
@@ -134,7 +167,7 @@ GOP::Solution GOP::two_param_iterative_gop(int par_i, int par_t, int distance_bu
 	do{
 		old = current;
 		current.process_gop(par_i, par_t, nodes, edges, start, end);
-
+		current.getScore(nodes);
 	}while (old.score < current.score);
 
 	return old;

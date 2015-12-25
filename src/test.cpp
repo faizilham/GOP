@@ -37,23 +37,12 @@ int main(){
 	}
 
 	file.close();
-
-	for (int i = 0; i < num_nodes; ++i){
-		for (int j = 0; j < num_nodes; ++j){
-			printf("%.0f ", edges.getLength(i, j));
-		}
-		printf("\n");
-	}
-
-
-	for (int i = 0; i < num_nodes; ++i){
-		for (int j = 0; j < num_score_elmts; ++j){
-			printf("%.0f ", nodes.getScore(i, j));
-		}
-		printf("\n");
-	}
 	
-	
-
+	Solution s = two_param_iterative_gop(3, 100, 5000, nodes, edges, start, end);
+	cout << s.distance << " " << s.score << endl;
+	for (auto i = s.path.begin(); i != s.path.end(); ++i){
+		cout << *i << " ";
+	}
+	cout << endl;
 	return 0;
 }

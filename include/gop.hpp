@@ -42,7 +42,7 @@ namespace GOP {
 		void process_gop(int par_i, int par_t, const NodeSet& nodes, const EdgeSet& edges, int start, int end);
 		float getScore(const NodeSet& nodes);
 	private:
-
+		void two_opt(const EdgeSet& edges);
 	};
 
 	Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, const NodeSet& nodes, const EdgeSet& edges, int start, int end);
