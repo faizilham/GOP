@@ -1,11 +1,11 @@
 CC=g++
-FLAGS=-std=c++11 -Wall
+FLAGS=-std=c++11 -Wall -O0 -g
 INCLUDES=include
 
 all: bin/gop.o bin/test.o
-	$(CC) $(FLAGS) bin/test.o bin/gop.o -o bin/test
+	$(CC) $(FLAGS) bin/gop.o bin/test.o -o bin/test
 
-bin/test.o:
+bin/test.o: src/test.cpp
 	$(CC) $(FLAGS) -I$(INCLUDES) -c src/test.cpp -o bin/test.o	
 
 bin/gop.o: src/gop.cpp include/gop.hpp

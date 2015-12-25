@@ -1,9 +1,9 @@
 #include "gop.hpp"
-#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <algorithm> 
 #include <set>
+#include <cstdio>
 
 GOP::NodeSet::NodeSet(int _num_nodes, int _num_score_elmts): num_nodes(_num_nodes), num_score_elmts(_num_score_elmts){
 	scores = new float[_num_nodes*_num_score_elmts];
@@ -14,10 +14,10 @@ GOP::NodeSet::~NodeSet(){
 }
 
 float GOP::NodeSet::getScore(int node_id, int score_elmt_id) const{
-	return scores[node_id*num_nodes + score_elmt_id];
+	return scores[node_id*num_score_elmts + score_elmt_id];
 }
 void GOP::NodeSet::setScore(int node_id, int score_elmt_id, float score){
-	scores[node_id*num_nodes + score_elmt_id] = score;
+	scores[node_id*num_score_elmts + score_elmt_id] = score;
 }
 
 GOP::EdgeSet::EdgeSet(int _num_nodes): num_nodes(_num_nodes){
@@ -30,7 +30,6 @@ GOP::EdgeSet::~EdgeSet(){
 
 void GOP::EdgeSet::addEdge(int node1, int node2, float length){
 	edges[node1 * num_nodes + node2] = length;
-	edges[node2 * num_nodes + node1] = length;
 }
 
 float GOP::EdgeSet::getLength(int node1, int node2) const{

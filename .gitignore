@@ -4,3 +4,5 @@ bin/*.dll
 bin/gop
 bin/test
 testcase
+tmp
+*.stackdump

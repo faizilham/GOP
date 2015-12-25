@@ -1,12 +1,13 @@
 #ifndef GOP_HPP
 #define GOP_HPP
 
+#include <cstdlib>
 #include <vector>
 
 namespace GOP {
 	class NodeSet{
 	private:
-		float *scores; // scores[node_id][score_elmt_id]
+		float *scores = NULL; // scores[node_id][score_elmt_id]
 	public:
 		int num_nodes;
 		int num_score_elmts;
@@ -19,7 +20,7 @@ namespace GOP {
 	class EdgeSet{
 	private:
 		int num_nodes;
-		float* edges;
+		float* edges = NULL;
 	public:
 		EdgeSet(int _num_nodes);
 		~EdgeSet();
