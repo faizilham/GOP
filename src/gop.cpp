@@ -203,14 +203,14 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	std::iter_swap(unused_nodes.begin(), unused_nodes.begin() + max_id); // TODO try with sort, maybe not so efficient
 	
 
-	/* 7. Build set T */
-	std::vector<int> T;
-	buildT(T, unused_nodes);
+	/* 7. Build T */
+	// since T is redefined every iteration, no need to save all and only take the 1st
+	int T = buildT(unused_nodes, used);
 	
 	// 8. While |T| > 0
-	while(!T.empty()){
+	while(T != -1){
 		// (a) Select Lb in T s.t. b ≤ j for all Lj in T.
-		int lb = T[0];
+		int lb = T;
 
 		// (b) Select edge (v,w) in S s.t. dvLb +dLbw − dvw ≤ dxLb +dLby − dxy for all (x,y) in S
 		int n = path.size(); int a, b; float dal, dlb, dab, dmin = 0; int imin;
@@ -229,11 +229,9 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 		path.insert(path.begin() + imin, lb);
 		distance += dmin;
 		score += nodes->getScore(lb); 
-		unused_nodes.erase(std::find(unused_nodes.begin(), unused_nodes.end(), lb));
-		used[lb] = true;
 
 		// (d) Redefine T as in Step 7.
-		buildT(T, unused_nodes);
+		T = buildT(unused_nodes, used);
 	}
 
 	printf("tighten %.0f %.0f\n", distance, score);
@@ -248,24 +246,27 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	Solution best(*this);
 }
 
-void GOP::Solution::buildT(std::vector<int>& T, const std::vector<int>& unused_nodes){
+int GOP::Solution::buildT(std::vector<int>& unused_nodes, bool* used){
 	/* Define set T = {Lm in L,Lm not in S : there exist (a,b) in S : the length of S is less than budget if
 		edge (a,b) is removed from S and edges (a,Lm) and (Lm,b) are added to S}.
 	*/
 
-	T.clear();
-	int n = path.size(); int a, b; float dab, dal, dlb;
-	for (int lm : unused_nodes){
+	int n = path.size(); int a, b, lm; float dab, dal, dlb;
+	for (auto it = unused_nodes.begin(); it != unused_nodes.end(); ++it){
+		lm = *it;
 		for (int i = 0; i < n - 1; ++i){
 			a = path[i]; b = path[i+1];
 			dab = edges->getLength(a,b); dal = edges->getLength(a,lm); dlb = edges->getLength(lm,b);
 
 			if (distance - dab + dal + dlb < distance_budget){
-				T.push_back(lm);
-				break;
+				unused_nodes.erase(it);
+				used[lm] = true;
+				return lm;
 			}
 		}
 	}
+
+	return -1;
 }
 
 GOP::Solution GOP::two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end){
