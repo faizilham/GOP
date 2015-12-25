@@ -38,7 +38,7 @@ int main(){
 
 	file.close();
 	
-	Solution s = two_param_iterative_gop(3, 100, 5000, nodes, edges, start, end);
+	Solution s = two_param_iterative_gop(3, 2000, 5000, nodes, edges, start, end);
 	cout << s.distance << " " << s.score << endl;
 	for (auto i = s.path.begin(); i != s.path.end(); ++i){
 		cout << *i << " ";

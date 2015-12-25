@@ -47,7 +47,11 @@ namespace GOP {
 		float getScore();
 	private:
 		void two_opt();
+		void setNodeInMiddle(int pos, int node);
 		int buildT(std::vector<int>& unused_nodes, bool* used);
+		void buildUnused(std::vector<int>& unused_nodes, bool* used);
+		void pathTightening(std::vector<int>& unused_nodes, bool* used);
+		float countDistance();
 	};
 
 	Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end);

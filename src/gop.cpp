@@ -81,9 +81,32 @@ float GOP::Solution::getScore(){
 	for (int node : path){
 		sum += nodes->getScore(node);
 	}
-	score = sum;
+	//score = sum;
 
 	return sum;
+}
+
+float GOP::Solution::countDistance(){
+	// TODO set score function
+	float sum = 0;
+	int n = path.size();
+	for (int i = 0; i < n - 1; ++i){
+		sum += edges->getLength(path[i], path[i+1]);
+	}
+
+	return sum;
+}
+
+void GOP::Solution::setNodeInMiddle(int pos, int node){
+	int bef = path[pos - 1]; int aft = path[pos + 1];
+	int cur = path[pos];
+
+	if (cur != -1){ // not inserted
+		distance = distance - edges->getLength(bef, cur) - edges->getLength(cur, aft);
+	}
+
+	path[pos] = node;
+	distance += edges->getLength(bef, node) + edges->getLength(node, aft);
 }
 
 void GOP::Solution::two_opt(){
@@ -102,9 +125,9 @@ void GOP::Solution::two_opt(){
 				dac = edges->getLength(a, c); dbd = edges->getLength(b, d);
 
 				if (dab + dcd > dac + dbd){
-					distance = distance - dab - dcd + dac + dbd;
-					path[i+1] = c; path[j] = b;
+					setNodeInMiddle(i+1, c); setNodeInMiddle(j, b);
 					changed = true;
+					printf("%d %d %d %d\n", a, b, c ,d);
 				}
 			}
 		}
@@ -120,7 +143,7 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	*/
 
 	/** INITIALIZATION PHASE **/
-	score = 0.0; distance = 0.0; path.clear(); std::set<int> L; bool used[nodes->num_nodes];
+	score = 0.0; distance = 0.0; path.clear(); std::set<int> R, L; bool used[nodes->num_nodes];
 	memset(used, 0, sizeof(bool) * nodes->num_nodes);
 
 	// 2. Initialize solution S to contain the single node s
@@ -151,11 +174,11 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 
 		/* (b) If z is the last vertex in S, then select b in L s.t. for all q in L, d(z,b) + d(b,e) <= d(z,q) + d(q,e). */
 		auto b = L.begin(); node = *b;
-		last_distance = edges->getLength(path.back(), node) + edges->getLength(node, end); ++b;
+		float min_dis = edges->getLength(path.back(), node) + edges->getLength(node, end); ++b;
 		while (b != L.end()){
 			float dis = edges->getLength(path.back(), *b) + edges->getLength(*b, end);
-			if (dis < last_distance){
-				last_distance = dis;
+			if (dis < min_dis){
+				min_dis = dis;
 				node = *b;
 			}
 			++b;
@@ -163,6 +186,7 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 
 		/* (c) Add b to the end of S. */
 		last_score = nodes->getScore(node); score += last_score;
+		last_distance = edges->getLength(path.back(), node);
 		path.push_back(node); used[node] = true;
 		distance += last_distance;
 		--available_nodes;
@@ -177,32 +201,95 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	/* 5. 2-opt algorithm */
 	two_opt();
 
-	printf("initial %.0f %.0f\n", distance, score);
-	for (auto i = path.begin(); i != path.end(); ++i){
-		printf("%d ", *i);
-	}
-	printf("\n");
-
 	/** PATH TIGHTENING PHASE **/
 
-	/* 6. Place the vertices not in S in a list L, such that Lm is the mth element of the list.
-		Define function sp(S,k) = score(T), where T is S with vertex k inserted at arbitrary location. 
-		Insert the elements into L such that sp(S,Lm) < sp(S,Lo), implies m > o. */
-	std::vector<int> unused_nodes; int max = score, max_id;
+	// 6. Build unused list
+	std::vector<int> unused_nodes;
+	buildUnused(unused_nodes, used);
 
-	for (int i = 0; i < nodes->num_nodes; ++i) {
-		if (!used[i]) {
-			unused_nodes.push_back(i);
-			int sp = score + nodes->getScore(i);
-			if (sp > max){
-				max = sp; max_id = i;
-			}
+	// 7-8 Path tightening
+	printf("tightening 1\n");
+	pathTightening(unused_nodes, used);
+
+
+	/** PERTURBATION AND IMPROVEMENT **/
+
+	/* 9. Flag current solution S as the best solution discovered and set y, the number of
+	iterations since the last improvement in the best solution, to be 0. */
+	Solution best(*this);
+	int y = 0;
+
+	int reset = 0;
+	// 10. While y <= t
+	while(y <= par_t){
+		/* (a) Randomly select i unique nodes in S, each of which is not s or e, and store them in set R.
+		*/
+		R.clear();
+		for (int i = 0; i < par_i; ++i){
+			int node;
+			do{
+				node = path[rand() % path.size()];
+			} while (node == start || node == end || (R.find(node) != R.end()));
+			R.insert(node);
+		}
+
+		/*(b) For each a in R, let b(S,a) be the node in S before a and let a(S,a) be the
+			node in S after a. Remove edges (b(S,a),a) and (a,a(S,a)) and add edge (b(S,a),a(S,a))
+			*/
+
+		int bef, aft;
+		for (int node : R){
+			auto pos = std::find(path.begin(), path.end(), node); // TODO optimize with memoization from above
+			bef = *(pos - 1); aft = *(pos + 1);
+			path.erase(pos);
+			
+			used[node] = false;
+			score -= nodes->getScore(node);
+
+			distance += edges->getLength(bef, aft) - edges->getLength(bef, node) - edges->getLength(node, aft);
+
+			unused_nodes.push_back(node);
+		}
+		
+		/*	(c) Place the vertices not in S and not in R in a list L, such that Lm is the mth
+			element of the list. Define function sp(S,k) as in Step 6. Insert the elements
+			into L such that sp(S,Lm) < sp(S,Lo) implies m > o.
+
+			note: this should be unused_nodes, so let's move to
+
+			(d) Add the contents of R in arbitrary order to the end of L.
+
+			note: joined in previous loop
+		*/
+
+		// (e) Repeat Steps 7 through 8 with L to complete modified path tightening.
+		printf("tightening 2\n");
+		pathTightening(unused_nodes, used);
+
+		/* (f) 2-opt algorithm */
+		two_opt();
+
+		// (g) Repeat Steps 6 through 8 to complete unmodified path tightening.
+
+		buildUnused(unused_nodes, used);
+		printf("tightening 3\n");
+		pathTightening(unused_nodes, used);
+
+		/* (h) If score(S) is higher than the score of the best solution yet discovered, flag
+		current solution S as the best solution discovered and set y = 0. Otherwise, set y = y + 1. */
+
+		if (score > best.score){
+			best.copy(*this);
+			y = 0;
+			printf("reset %d\n", ++reset);
+		} else {
+			++y;	
 		}
 	}
 
-	std::iter_swap(unused_nodes.begin(), unused_nodes.begin() + max_id); // TODO try with sort, maybe not so efficient
-	
+}
 
+void GOP::Solution::pathTightening(std::vector<int>& unused_nodes, bool* used){
 	/* 7. Build T */
 	// since T is redefined every iteration, no need to save all and only take the 1st
 	int T = buildT(unused_nodes, used);
@@ -233,17 +320,28 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 		// (d) Redefine T as in Step 7.
 		T = buildT(unused_nodes, used);
 	}
+	printf("finish\n");
+}
 
-	printf("tighten %.0f %.0f\n", distance, score);
-	for (auto i = path.begin(); i != path.end(); ++i){
-		printf("%d ", *i);
+void GOP::Solution::buildUnused(std::vector<int>& unused_nodes, bool* used){
+	/* 6. Place the vertices not in S in a list L, such that Lm is the mth element of the list.
+		Define function sp(S,k) = score(T), where T is S with vertex k inserted at arbitrary location. 
+		Insert the elements into L such that sp(S,Lm) < sp(S,Lo), implies m > o. */
+	int max = 0, max_id = -1;
+
+	unused_nodes.clear();
+
+	for (int i = 0; i < nodes->num_nodes; ++i) {
+		if (!used[i]) {
+			unused_nodes.push_back(i);
+			int sp = nodes->getScore(i);
+			if (sp > max){
+				max = sp; max_id = unused_nodes.size() - 1;
+			}
+		}
 	}
-	printf("\n");
 
-
-	/* 9. Flag current solution S as the best solution discovered and set y, the number of
-	iterations since the last improvement in the best solution, to be 0. */
-	Solution best(*this);
+	std::iter_swap(unused_nodes.begin(), unused_nodes.begin() + max_id); // TODO try with sort, maybe not so efficient
 }
 
 int GOP::Solution::buildT(std::vector<int>& unused_nodes, bool* used){
