@@ -32,6 +32,8 @@ namespace GOP {
 	class Solution{
 	public:
 		static int distance_budget;
+		static NodeSet *nodes;
+		static EdgeSet *edges;
 
 		float score, distance;
 		std::vector<int> path;
@@ -40,14 +42,14 @@ namespace GOP {
 		~Solution();
 		Solution(const Solution& sol);
 		void operator= (const Solution& sol);
-		void process_gop(int par_i, int par_t, const NodeSet& nodes, const EdgeSet& edges, int start, int end);
-		float getScore(const NodeSet& nodes);
+		void process_gop(int par_i, int par_t, int start, int end);
+		float getScore();
 	private:
-		void two_opt(const EdgeSet& edges);
+		void two_opt();
 		void buildT(std::vector<int>& T, const std::vector<int>& unused);
 	};
 
-	Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, const NodeSet& nodes, const EdgeSet& edges, int start, int end);
+	Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end);
 	
 
 }
