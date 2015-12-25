@@ -13,7 +13,8 @@ namespace GOP {
 		int num_score_elmts;
 		NodeSet(int _num_node, int _num_score_elmt);
 		~NodeSet();
-		float getScore(int node_id, int score_elmt_id) const;
+		float getScoreElement(int node_id, int score_elmt_id) const;
+		float getScore(int node_id) const;
 		void setScore(int node_id, int score_elmt_id, float score);
 	};
 
@@ -43,6 +44,7 @@ namespace GOP {
 		float getScore(const NodeSet& nodes);
 	private:
 		void two_opt(const EdgeSet& edges);
+		void buildT(std::vector<int>& T, const std::vector<int>& unused);
 	};
 
 	Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, const NodeSet& nodes, const EdgeSet& edges, int start, int end);

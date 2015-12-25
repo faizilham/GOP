@@ -13,9 +13,19 @@ GOP::NodeSet::~NodeSet(){
 	delete[] scores;
 }
 
-float GOP::NodeSet::getScore(int node_id, int score_elmt_id) const{
+float GOP::NodeSet::getScoreElement(int node_id, int score_elmt_id) const{
 	return scores[node_id*num_score_elmts + score_elmt_id];
 }
+
+float GOP::NodeSet::getScore(int node_id) const{
+	float sum = 0;
+	for (int i = 0; i < num_score_elmts; ++i){
+		sum += getScoreElement(node_id, i) / num_score_elmts;	
+	}
+
+	return sum;
+}
+
 void GOP::NodeSet::setScore(int node_id, int score_elmt_id, float score){
 	scores[node_id*num_score_elmts + score_elmt_id] = score;
 }
@@ -62,9 +72,7 @@ float GOP::Solution::getScore(const NodeSet& nodes){
 	// TODO set score function
 	float sum = 0;
 	for (int node : path){
-		for (int i = 0; i < nodes.num_score_elmts; ++i){
-			sum += nodes.getScore(node, i) / nodes.num_score_elmts;	
-		}
+		sum += nodes.getScore(node);
 	}
 	score = sum;
 
@@ -72,7 +80,7 @@ float GOP::Solution::getScore(const NodeSet& nodes){
 }
 
 void GOP::Solution::two_opt(const EdgeSet& edges){
-	/* (2-opt algorithm) While there are edges (a,b), (c,d) in S s.t. d(a,b) + d(c,d) > d(a,c) + d(b,d), 
+	/* (2-opt algorithm) While there exist edges (a,b), (c,d) in S s.t. d(a,b) + d(c,d) > d(a,c) + d(b,d), 
 		remove edges (a,b) and (c,d) from S and add edges (a,c) and (b,d) to S. */
 
 	int a, b, c, d; float dab, dcd, dac, dbd; bool changed; int n = path.size();
@@ -104,11 +112,14 @@ void GOP::Solution::process_gop(int par_i, int par_t, const NodeSet& nodes, cons
 	limit l, and score(S), a function that returns the score of a solution S.
 	*/
 
-	score = 0.0; distance = 0.0; path.clear(); std::set<int> L;
+	/** INITIALIZATION PHASE **/
+	score = 0.0; distance = 0.0; path.clear(); std::set<int> L; bool used[nodes.num_nodes];
+	memset(used, 0, sizeof(bool) * nodes.num_nodes);
 
 	// 2. Initialize solution S to contain the single node s
-	path.push_back(start);
-	float last_distance = 0.0;
+	path.push_back(start); used[start] = true;
+	float last_distance = 0.0; float last_score = nodes.getScore(start);
+	score = last_score;
 	int available_nodes = nodes.num_nodes - 1;
 
 	// 3. While adding node e to the end of S would not cause the length of S to exceed the distance limit l.
@@ -144,20 +155,59 @@ void GOP::Solution::process_gop(int par_i, int par_t, const NodeSet& nodes, cons
 		}
 
 		/* (c) Add b to the end of S. */
-		path.push_back(node);
+		last_score = nodes.getScore(node); score += last_score;
+		path.push_back(node); used[node] = true;
 		distance += last_distance;
 		--available_nodes;
 	}
 
 	// 4. Replace the last vertex in S with e.
-	path.pop_back(); 
+	path.pop_back(); used[end] = true;
+	score = score - last_score + nodes.getScore(end);
 	distance = distance - last_distance + edges.getLength(path.back(), end);
-	path.push_back(end);
+	path.push_back(end); used[end] = true;
 
 	/* 5. 2-opt algorithm */
 	two_opt(edges);
+
+	/** PATH TIGHTENING PHASE **/
+
+	/* 6. Place the vertices not in S in a list L, such that Lm is the mth element of the list.
+		Define function sp(S,k) = score(T), where T is S with vertex k inserted at arbitrary location. 
+		Insert the elements into L such that sp(S,Lm) < sp(S,Lo), implies m > o. */
+	std::vector<int> unused; int max = score, max_id;
+
+	for (int i = 0; i < nodes.num_nodes; ++i) {
+		if (unused[i]) {
+			unused.push_back(i);
+			int sp = score + nodes.getScore(i);
+			if (sp > max){
+				max = sp; max_id = i;
+			}
+		}
+	}
+
+	std::iter_swap(unused.begin(), unused.begin() + max_id); // TODO try with sort, maybe not so efficient
+	
+
+	/* 7. Build set T */
+	std::vector<int> T;
+	buildT(T, unused);
+	
+
 }
 
+void GOP::Solution::buildT(std::vector<int>& T, const std::vector<int>& unused){
+	/* Define set T = {Lm in L,Lm not in S : there exist (a,b) in S : the length of S is less than budget if
+		edge (a,b) is removed from S and edges (a,Lm) and (Lm,b) are added to S}.
+	*/
+	int n = path.size(); int a, b;
+	for (int Lm : unused){
+		for (int i = 0; i < n - 1; ++i){
+			a = path[i]; b = path[i+1];
+		}
+	}
+}
 
 GOP::Solution GOP::two_param_iterative_gop(int par_i, int par_t, int distance_budget, const NodeSet& nodes, const EdgeSet& edges, int start, int end){
 	srand(time(NULL));
@@ -167,7 +217,7 @@ GOP::Solution GOP::two_param_iterative_gop(int par_i, int par_t, int distance_bu
 	do{
 		old = current;
 		current.process_gop(par_i, par_t, nodes, edges, start, end);
-		current.getScore(nodes);
+		//current.getScore(nodes);
 	}while (old.score < current.score);
 
 	return old;
