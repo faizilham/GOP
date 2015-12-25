@@ -1,5 +1,5 @@
 CC=g++
-FLAGS=-std=c++11 -Wall -O0 -g
+FLAGS=-std=c++11 -Wall -O1
 INCLUDES=include
 
 all: bin/gop.o bin/test.o

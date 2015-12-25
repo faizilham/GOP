@@ -46,19 +46,12 @@ float GOP::EdgeSet::getLength(int node1, int node2) const{
 	return edges[node1 * num_nodes + node2];
 }
 
-int GOP::Solution::distance_budget;
-GOP::NodeSet *GOP::Solution::nodes = NULL;
-GOP::EdgeSet *GOP::Solution::edges = NULL;
-
-GOP::Solution::Solution(): score(0), distance(0){}
+GOP::Solution::Solution(int budget, NodeSet* _nodes, EdgeSet* _edges)
+: score(0), distance(0), distance_budget(budget), nodes(_nodes), edges(_edges){}
 
 GOP::Solution::~Solution(){}
 GOP::Solution::Solution(const Solution& sol){
-	score = sol.score;
-	distance = sol.distance;
-	for (int node : sol.path){
-		path.push_back(node);
-	}
+	copy(sol);
 }
 
 void GOP::Solution::operator= (const Solution& sol){
@@ -68,6 +61,8 @@ void GOP::Solution::operator= (const Solution& sol){
 void GOP::Solution::copy (const Solution& sol){
 	score = sol.score;
 	distance = sol.distance;
+	nodes = sol.nodes;
+	edges = sol.edges;
 	path.clear();
 	for (int node : sol.path){
 		path.push_back(node);
@@ -75,8 +70,8 @@ void GOP::Solution::copy (const Solution& sol){
 }
 
 
-float GOP::Solution::getScore(){
-	// TODO set score function
+float GOP::Solution::countScore(){
+	// for debugging only
 	float sum = 0;
 	for (int node : path){
 		sum += nodes->getScore(node);
@@ -87,7 +82,7 @@ float GOP::Solution::getScore(){
 }
 
 float GOP::Solution::countDistance(){
-	// TODO set score function
+	// for debugging only
 	float sum = 0;
 	int n = path.size();
 	for (int i = 0; i < n - 1; ++i){
@@ -97,17 +92,7 @@ float GOP::Solution::countDistance(){
 	return sum;
 }
 
-void GOP::Solution::setNodeInMiddle(int pos, int node){
-	int bef = path[pos - 1]; int aft = path[pos + 1];
-	int cur = path[pos];
 
-	if (cur != -1){ // not inserted
-		distance = distance - edges->getLength(bef, cur) - edges->getLength(cur, aft);
-	}
-
-	path[pos] = node;
-	distance += edges->getLength(bef, node) + edges->getLength(node, aft);
-}
 
 void GOP::Solution::two_opt(){
 	/* (2-opt algorithm) While there exist edges (a,b), (c,d) in S s.t. d(a,b) + d(c,d) > d(a,c) + d(b,d), 
@@ -125,11 +110,22 @@ void GOP::Solution::two_opt(){
 				dac = edges->getLength(a, c); dbd = edges->getLength(b, d);
 
 				if (dab + dcd > dac + dbd){
-					setNodeInMiddle(i+1, c); setNodeInMiddle(j, b);
+					distance = distance - dab - dcd + dac + dbd;
+
+					int n = j - i; // size from b and c
+					for (int k = 0; k < n / 2; ++k){ // flip
+						int n1 = i + 1 + k;
+						int n2 = j - k;
+
+						std::iter_swap(path.begin() + n1, path.begin() + n2);
+					}
+
 					changed = true;
-					printf("%d %d %d %d\n", a, b, c ,d);
+					break;
 				}
 			}
+
+			if (changed) break;
 		}
 
 	} while(changed);
@@ -208,7 +204,6 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	buildUnused(unused_nodes, used);
 
 	// 7-8 Path tightening
-	printf("tightening 1\n");
 	pathTightening(unused_nodes, used);
 
 
@@ -219,7 +214,6 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	Solution best(*this);
 	int y = 0;
 
-	int reset = 0;
 	// 10. While y <= t
 	while(y <= par_t){
 		/* (a) Randomly select i unique nodes in S, each of which is not s or e, and store them in set R.
@@ -263,7 +257,6 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 		*/
 
 		// (e) Repeat Steps 7 through 8 with L to complete modified path tightening.
-		printf("tightening 2\n");
 		pathTightening(unused_nodes, used);
 
 		/* (f) 2-opt algorithm */
@@ -272,7 +265,6 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 		// (g) Repeat Steps 6 through 8 to complete unmodified path tightening.
 
 		buildUnused(unused_nodes, used);
-		printf("tightening 3\n");
 		pathTightening(unused_nodes, used);
 
 		/* (h) If score(S) is higher than the score of the best solution yet discovered, flag
@@ -281,7 +273,6 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 		if (score > best.score){
 			best.copy(*this);
 			y = 0;
-			printf("reset %d\n", ++reset);
 		} else {
 			++y;	
 		}
@@ -320,7 +311,6 @@ void GOP::Solution::pathTightening(std::vector<int>& unused_nodes, bool* used){
 		// (d) Redefine T as in Step 7.
 		T = buildT(unused_nodes, used);
 	}
-	printf("finish\n");
 }
 
 void GOP::Solution::buildUnused(std::vector<int>& unused_nodes, bool* used){
@@ -341,7 +331,8 @@ void GOP::Solution::buildUnused(std::vector<int>& unused_nodes, bool* used){
 		}
 	}
 
-	std::iter_swap(unused_nodes.begin(), unused_nodes.begin() + max_id); // TODO try with sort, maybe not so efficient
+	if (max_id > -1)
+		std::iter_swap(unused_nodes.begin(), unused_nodes.begin() + max_id); // TODO try with sort, maybe not so efficient
 }
 
 int GOP::Solution::buildT(std::vector<int>& unused_nodes, bool* used){
@@ -369,15 +360,11 @@ int GOP::Solution::buildT(std::vector<int>& unused_nodes, bool* used){
 
 GOP::Solution GOP::two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end){
 	srand(time(NULL));
-	Solution::distance_budget = distance_budget;
-	Solution::nodes = &nodes;
-	Solution::edges = &edges;
-	Solution old, current;
+	Solution old(distance_budget, &nodes, &edges), current(distance_budget, &nodes, &edges);
 
 	do{
 		old = current;
 		current.process_gop(par_i, par_t, start, end);
-		//current.getScore(nodes);
 	}while (old.score < current.score);
 
 	return old;

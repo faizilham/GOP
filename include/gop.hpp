@@ -31,27 +31,29 @@ namespace GOP {
 
 	class Solution{
 	public:
-		static int distance_budget;
-		static NodeSet *nodes;
-		static EdgeSet *edges;
-
 		float score, distance;
+		int distance_budget;
+		NodeSet *nodes;
+		EdgeSet *edges;
+		
 		std::vector<int> path;
 
-		Solution();
+		Solution(int budget, NodeSet* _nodes, EdgeSet* _edges);
 		~Solution();
 		Solution(const Solution& sol);
 		void operator= (const Solution& sol);
 		void copy (const Solution& sol);
 		void process_gop(int par_i, int par_t, int start, int end);
-		float getScore();
+
 	private:
+		float countScore();
+		float countDistance();
+
 		void two_opt();
 		void setNodeInMiddle(int pos, int node);
 		int buildT(std::vector<int>& unused_nodes, bool* used);
 		void buildUnused(std::vector<int>& unused_nodes, bool* used);
 		void pathTightening(std::vector<int>& unused_nodes, bool* used);
-		float countDistance();
 	};
 
 	Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end);
