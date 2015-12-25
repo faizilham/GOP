@@ -42,6 +42,7 @@ namespace GOP {
 		~Solution();
 		Solution(const Solution& sol);
 		void operator= (const Solution& sol);
+		void copy (const Solution& sol);
 		void process_gop(int par_i, int par_t, int start, int end);
 		float getScore();
 	private:

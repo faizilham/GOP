@@ -62,6 +62,10 @@ GOP::Solution::Solution(const Solution& sol){
 }
 
 void GOP::Solution::operator= (const Solution& sol){
+	copy(sol);
+}
+
+void GOP::Solution::copy (const Solution& sol){
 	score = sol.score;
 	distance = sol.distance;
 	path.clear();
@@ -69,6 +73,7 @@ void GOP::Solution::operator= (const Solution& sol){
 		path.push_back(node);
 	}
 }
+
 
 float GOP::Solution::getScore(){
 	// TODO set score function
@@ -172,16 +177,22 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	/* 5. 2-opt algorithm */
 	two_opt();
 
+	printf("initial %.0f %.0f\n", distance, score);
+	for (auto i = path.begin(); i != path.end(); ++i){
+		printf("%d ", *i);
+	}
+	printf("\n");
+
 	/** PATH TIGHTENING PHASE **/
 
 	/* 6. Place the vertices not in S in a list L, such that Lm is the mth element of the list.
 		Define function sp(S,k) = score(T), where T is S with vertex k inserted at arbitrary location. 
 		Insert the elements into L such that sp(S,Lm) < sp(S,Lo), implies m > o. */
-	std::vector<int> unused; int max = score, max_id;
+	std::vector<int> unused_nodes; int max = score, max_id;
 
 	for (int i = 0; i < nodes->num_nodes; ++i) {
-		if (unused[i]) {
-			unused.push_back(i);
+		if (!used[i]) {
+			unused_nodes.push_back(i);
 			int sp = score + nodes->getScore(i);
 			if (sp > max){
 				max = sp; max_id = i;
@@ -189,24 +200,70 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 		}
 	}
 
-	std::iter_swap(unused.begin(), unused.begin() + max_id); // TODO try with sort, maybe not so efficient
+	std::iter_swap(unused_nodes.begin(), unused_nodes.begin() + max_id); // TODO try with sort, maybe not so efficient
 	
 
 	/* 7. Build set T */
 	std::vector<int> T;
-	buildT(T, unused);
+	buildT(T, unused_nodes);
 	
+	// 8. While |T| > 0
+	while(!T.empty()){
+		// (a) Select Lb in T s.t. b ≤ j for all Lj in T.
+		int lb = T[0];
 
+		// (b) Select edge (v,w) in S s.t. dvLb +dLbw − dvw ≤ dxLb +dLby − dxy for all (x,y) in S
+		int n = path.size(); int a, b; float dal, dlb, dab, dmin = 0; int imin;
+
+		for (int i = 0; i < n - 1; ++i){
+			a = path[i]; b = path[i+1];
+			dab = edges->getLength(a,b); dal = edges->getLength(a,lb); dlb = edges->getLength(lb,b);
+			float dnew = dal + dlb - dab;
+
+			if (dmin > dnew || i == 0){
+				dmin = dnew; imin = i + 1;
+			}
+		}
+
+		// (c) Remove edge (v,w) from S and add edges (v,Lb) and (Lb,w) to S.
+		path.insert(path.begin() + imin, lb);
+		distance += dmin;
+		score += nodes->getScore(lb); 
+		unused_nodes.erase(std::find(unused_nodes.begin(), unused_nodes.end(), lb));
+		used[lb] = true;
+
+		// (d) Redefine T as in Step 7.
+		buildT(T, unused_nodes);
+	}
+
+	printf("tighten %.0f %.0f\n", distance, score);
+	for (auto i = path.begin(); i != path.end(); ++i){
+		printf("%d ", *i);
+	}
+	printf("\n");
+
+
+	/* 9. Flag current solution S as the best solution discovered and set y, the number of
+	iterations since the last improvement in the best solution, to be 0. */
+	Solution best(*this);
 }
 
-void GOP::Solution::buildT(std::vector<int>& T, const std::vector<int>& unused){
+void GOP::Solution::buildT(std::vector<int>& T, const std::vector<int>& unused_nodes){
 	/* Define set T = {Lm in L,Lm not in S : there exist (a,b) in S : the length of S is less than budget if
 		edge (a,b) is removed from S and edges (a,Lm) and (Lm,b) are added to S}.
 	*/
-	int n = path.size(); int a, b;
-	for (int Lm : unused){
+
+	T.clear();
+	int n = path.size(); int a, b; float dab, dal, dlb;
+	for (int lm : unused_nodes){
 		for (int i = 0; i < n - 1; ++i){
 			a = path[i]; b = path[i+1];
+			dab = edges->getLength(a,b); dal = edges->getLength(a,lm); dlb = edges->getLength(lm,b);
+
+			if (distance - dab + dal + dlb < distance_budget){
+				T.push_back(lm);
+				break;
+			}
 		}
 	}
 }
