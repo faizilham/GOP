@@ -12,7 +12,7 @@ bin/libgop.dll: bin/gop.o
 	$(CC) $(FLAGS) -shared bin/gop.o -o bin/libgop.dll	
 
 bin/gop.o: src/gop.cpp include/gop.hpp
-	$(CC) $(FLAGS) -I$(INCLUDES) -c src/gop.cpp -o bin/gop.o
+	$(CC) $(FLAGS) -I$(INCLUDES) -DBUILD_GOP_DLL -c src/gop.cpp -o bin/gop.o
 
 clean:
 	rm -f bin/*.o bin/*.dll bin/*.exe bin/test

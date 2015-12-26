@@ -1,12 +1,16 @@
-#ifndef GOP_HPP
-#define GOP_HPP
+#ifndef GOP_DLL_H
+#define GOP_DLL_H
 
 #include <vector>
 
-#define EXPORTDLL __declspec(dllexport)
+#ifdef BUILD_GOP_DLL
+#define GOP2PIADLL_API __declspec(dllexport)
+#else
+#define GOP2PIADLL_API __declspec(dllimport)
+#endif
 
 namespace GOP {
-	class EXPORTDLL NodeSet{
+	class GOP2PIADLL_API NodeSet{
 	private:
 		float *scores; // scores[node_id][score_elmt_id]
 	public:
@@ -19,7 +23,7 @@ namespace GOP {
 		void setScore(int node_id, int score_elmt_id, float score);
 	};
 
-	class EXPORTDLL EdgeSet{
+	class GOP2PIADLL_API EdgeSet{
 	private:
 		int num_nodes;
 		float* edges;
@@ -30,7 +34,7 @@ namespace GOP {
 		float getLength(int node1, int node2) const;
 	};
 
-	class EXPORTDLL Solution{
+	class GOP2PIADLL_API Solution{
 	public:
 		float score, distance;
 		int distance_budget;
@@ -56,7 +60,7 @@ namespace GOP {
 		void pathTightening(std::vector<int>& unused_nodes, bool* used);
 	};
 
-	EXPORTDLL Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end);
+	Solution GOP2PIADLL_API two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end);
 }
 
 #endif
