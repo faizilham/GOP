@@ -1,5 +1,5 @@
 #include "gop.hpp"
-#include <cstring>
+#include <memory>
 #include <random>
 #include <algorithm> 
 #include <set>
@@ -142,7 +142,7 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 
 	/** INITIALIZATION PHASE **/
 	score = 0.0; distance = 0.0; path.clear(); std::set<int> R, L; bool used[nodes->num_nodes];
-	memset(used, 0, sizeof(bool) * nodes->num_nodes);
+	std::fill_n(used, nodes->num_nodes, 0);
 
 	// 2. Initialize solution S to contain the single node s
 	path.push_back(start); used[start] = true;
