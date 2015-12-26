@@ -7,6 +7,26 @@
 using namespace GOP;
 using namespace std;
 
+float scorefunc (const NodeSet& nodes, const std::vector<int>& path){
+	float sum  = 0;
+	for (int node : path){
+		sum += nodes.getScore(node);
+	}
+
+	return sum;
+}
+
+float spfunc (const NodeSet& nodes, const std::vector<int>& path, int newNode){
+	float sum  = 0;
+	for (int node : path){
+		sum += nodes.getScore(node);
+	}
+
+	sum += nodes.getScore(newNode);
+
+	return sum;
+}
+
 int main(){
 	string temp;
 
@@ -38,7 +58,7 @@ int main(){
 
 	file.close();
 	
-	Solution s = two_param_iterative_gop(3, 2000, 5000, nodes, edges, start, end);
+	Solution s = two_param_iterative_gop(3, 2000, 5000, nodes, edges, start, end, scorefunc, spfunc);
 	cout << s.distance << " " << s.score << endl;
 	for (auto i = s.path.begin(); i != s.path.end(); ++i){
 		cout << *i << " ";

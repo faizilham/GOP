@@ -45,11 +45,15 @@ float GOP::EdgeSet::getLength(int node1, int node2) const{
 	return edges[node1 * num_nodes + node2];
 }
 
-GOP::Solution::Solution(int budget, NodeSet* _nodes, EdgeSet* _edges)
-: score(0), distance(0), distance_budget(budget), nodes(_nodes), edges(_edges){}
+GOP::Solution::Solution(int budget, NodeSet* _nodes, EdgeSet* _edges, scorefunc_t _scorefunc, spfunc_t _spfunc)
+: score(0), distance(0), distance_budget(budget), nodes(_nodes), edges(_edges), scorefunc(_scorefunc), spfunc(_spfunc){}
 
 GOP::Solution::~Solution(){}
 GOP::Solution::Solution(const Solution& sol){
+	nodes = sol.nodes;
+	edges = sol.edges;
+	scorefunc = sol.scorefunc;
+	spfunc = sol.spfunc;
 	copy(sol);
 }
 
@@ -60,8 +64,6 @@ void GOP::Solution::operator= (const Solution& sol){
 void GOP::Solution::copy (const Solution& sol){
 	score = sol.score;
 	distance = sol.distance;
-	nodes = sol.nodes;
-	edges = sol.edges;
 	path.clear();
 	for (int node : sol.path){
 		path.push_back(node);
@@ -70,14 +72,11 @@ void GOP::Solution::copy (const Solution& sol){
 
 
 float GOP::Solution::countScore(){
-	// for debugging only
-	float sum = 0;
-	for (int node : path){
-		sum += nodes->getScore(node);
-	}
-	//score = sum;
+	return scorefunc(*nodes, path);
+}
 
-	return sum;
+float GOP::Solution::countSP(int newNode){
+	return spfunc(*nodes, path, newNode);
 }
 
 float GOP::Solution::countDistance(){
@@ -147,8 +146,7 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 
 	// 2. Initialize solution S to contain the single node s
 	path.push_back(start); used[start] = true;
-	float last_distance = 0.0; float last_score = nodes->getScore(start);
-	score = last_score;
+	float last_distance = 0.0; 
 	int available_nodes = nodes->num_nodes - 1;
 
 	// 3. While adding node e to the end of S would not cause the length of S to exceed the distance limit l.
@@ -184,7 +182,6 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 		}
 
 		/* (c) Add b to the end of S. */
-		last_score = nodes->getScore(node); score += last_score;
 		last_distance = edges->getLength(path.back(), node);
 		path.push_back(node); used[node] = true;
 		distance += last_distance;
@@ -193,7 +190,6 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 
 	// 4. Replace the last vertex in S with e.
 	path.pop_back(); used[end] = true;
-	score = score - last_score + nodes->getScore(end);
 	distance = distance - last_distance + edges->getLength(path.back(), end);
 	path.push_back(end); used[end] = true;
 
@@ -214,6 +210,7 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 
 	/* 9. Flag current solution S as the best solution discovered and set y, the number of
 	iterations since the last improvement in the best solution, to be 0. */
+	score = countScore();
 	Solution best(*this);
 	int y = 0;
 
@@ -242,7 +239,6 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 			path.erase(pos);
 			
 			used[node] = false;
-			score -= nodes->getScore(node);
 
 			distance += edges->getLength(bef, aft) - edges->getLength(bef, node) - edges->getLength(node, aft);
 
@@ -273,6 +269,8 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 
 		/* (h) If score(S) is higher than the score of the best solution yet discovered, flag
 		current solution S as the best solution discovered and set y = 0. Otherwise, set y = y + 1. */
+
+		score = countScore();
 
 		if (score > best.score){
 			best.copy(*this);
@@ -310,7 +308,6 @@ void GOP::Solution::pathTightening(std::vector<int>& unused_nodes, bool* used){
 		// (c) Remove edge (v,w) from S and add edges (v,Lb) and (Lb,w) to S.
 		path.insert(path.begin() + imin, lb);
 		distance += dmin;
-		score += nodes->getScore(lb); 
 
 		// (d) Redefine T as in Step 7.
 		T = buildT(unused_nodes, used);
@@ -328,7 +325,7 @@ void GOP::Solution::buildUnused(std::vector<int>& unused_nodes, bool* used){
 	for (int i = 0; i < nodes->num_nodes; ++i) {
 		if (!used[i]) {
 			unused_nodes.push_back(i);
-			int sp = nodes->getScore(i);
+			int sp = countSP(i);
 			if (sp > max){
 				max = sp; max_id = unused_nodes.size() - 1;
 			}
@@ -362,8 +359,8 @@ int GOP::Solution::buildT(std::vector<int>& unused_nodes, bool* used){
 	return -1;
 }
 
-GOP::Solution GOP::two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end){
-	Solution old(distance_budget, &nodes, &edges), current(distance_budget, &nodes, &edges);
+GOP::Solution GOP::two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end, scorefunc_t scorefunc, spfunc_t spfunc){
+	Solution old(distance_budget, &nodes, &edges, scorefunc, spfunc), current(distance_budget, &nodes, &edges, scorefunc, spfunc);
 
 	do{
 		old = current;
