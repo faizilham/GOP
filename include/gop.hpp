@@ -1,13 +1,14 @@
 #ifndef GOP_HPP
 #define GOP_HPP
 
-#include <cstdlib>
 #include <vector>
 
+#define EXPORTDLL __declspec(dllexport)
+
 namespace GOP {
-	class NodeSet{
+	class EXPORTDLL NodeSet{
 	private:
-		float *scores = NULL; // scores[node_id][score_elmt_id]
+		float *scores; // scores[node_id][score_elmt_id]
 	public:
 		int num_nodes;
 		int num_score_elmts;
@@ -18,10 +19,10 @@ namespace GOP {
 		void setScore(int node_id, int score_elmt_id, float score);
 	};
 
-	class EdgeSet{
+	class EXPORTDLL EdgeSet{
 	private:
 		int num_nodes;
-		float* edges = NULL;
+		float* edges;
 	public:
 		EdgeSet(int _num_nodes);
 		~EdgeSet();
@@ -29,13 +30,12 @@ namespace GOP {
 		float getLength(int node1, int node2) const;
 	};
 
-	class Solution{
+	class EXPORTDLL Solution{
 	public:
 		float score, distance;
 		int distance_budget;
 		NodeSet *nodes;
 		EdgeSet *edges;
-		
 		std::vector<int> path;
 
 		Solution(int budget, NodeSet* _nodes, EdgeSet* _edges);
@@ -56,9 +56,7 @@ namespace GOP {
 		void pathTightening(std::vector<int>& unused_nodes, bool* used);
 	};
 
-	Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end);
-	
-
+	EXPORTDLL Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end);
 }
 
 #endif

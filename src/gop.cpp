@@ -1,9 +1,9 @@
 #include "gop.hpp"
+#include <cstdlib>
 #include <cstring>
 #include <ctime>
 #include <algorithm> 
 #include <set>
-#include <cstdio>
 
 GOP::NodeSet::NodeSet(int _num_nodes, int _num_score_elmts): num_nodes(_num_nodes), num_score_elmts(_num_score_elmts){
 	scores = new float[_num_nodes*_num_score_elmts];
@@ -253,7 +253,7 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 
 			(d) Add the contents of R in arbitrary order to the end of L.
 
-			note: joined in previous loop
+			note: joined to previous loop
 		*/
 
 		// (e) Repeat Steps 7 through 8 with L to complete modified path tightening.
