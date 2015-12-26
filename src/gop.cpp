@@ -1,7 +1,6 @@
 #include "gop.hpp"
-#include <cstdlib>
 #include <cstring>
-#include <ctime>
+#include <random>
 #include <algorithm> 
 #include <set>
 
@@ -138,6 +137,10 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	limit l, and score(S), a function that returns the score of a solution S.
 	*/
 
+	std::random_device rd;
+    std::mt19937 generator(rd());
+    std::uniform_int_distribution<> random_node(0, nodes->num_nodes - 1);
+
 	/** INITIALIZATION PHASE **/
 	score = 0.0; distance = 0.0; path.clear(); std::set<int> R, L; bool used[nodes->num_nodes];
 	memset(used, 0, sizeof(bool) * nodes->num_nodes);
@@ -161,7 +164,7 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 			L.clear();
 			for (int i = 0; i < par_i; ++i){
 				do{
-					node = rand() % nodes->num_nodes;
+					node = random_node(generator);
 				} while((node == end) || (std::find(path.begin(), path.end(), node) != path.end()));
 
 				L.insert(node);
@@ -218,11 +221,12 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	while(y <= par_t){
 		/* (a) Randomly select i unique nodes in S, each of which is not s or e, and store them in set R.
 		*/
+		std::uniform_int_distribution<> random_remove(0, path.size()-1);
 		R.clear();
 		for (int i = 0; i < par_i; ++i){
 			int node;
 			do{
-				node = path[rand() % path.size()];
+				node = path[random_remove(generator)];
 			} while (node == start || node == end || (R.find(node) != R.end()));
 			R.insert(node);
 		}
@@ -359,7 +363,6 @@ int GOP::Solution::buildT(std::vector<int>& unused_nodes, bool* used){
 }
 
 GOP::Solution GOP::two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end){
-	srand(time(NULL));
 	Solution old(distance_budget, &nodes, &edges), current(distance_budget, &nodes, &edges);
 
 	do{
