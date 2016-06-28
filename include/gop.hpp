@@ -29,8 +29,8 @@ namespace GOP {
 		float getLength(int node1, int node2) const;
 	};
 
-	typedef std::function<int(const NodeSet&, const std::vector<int>&)> scorefunc_t;
-	typedef std::function<int(const NodeSet&, const std::vector<int>&,int)> spfunc_t;
+	typedef std::function<float(const NodeSet&, const std::vector<int>&)> scorefunc_t;
+	typedef std::function<float(const NodeSet&, const std::vector<int>&,int)> spfunc_t;
 
 	struct ScoreFunction{
 		std::function<float(const std::vector<int>&)> score; // NodeSet N, vector<int> path -> float score
