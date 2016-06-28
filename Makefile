@@ -1,15 +1,12 @@
 CC=g++
-FLAGS=-std=c++11 -Wall -O3
+FLAGS=-std=c++11 -Wall -O3 -DBUILDLINUX
 INCLUDES=include
 
-all: bin/libgop.dll bin/test.o
-	$(CC) $(FLAGS) -Lbin -lgop bin/test.o -o bin/test
+all: bin/gop.o bin/test.o
+	$(CC) $(FLAGS) bin/gop.o bin/test.o -o bin/test
 
 bin/test.o: src/test.cpp
 	$(CC) $(FLAGS) -I$(INCLUDES) -c src/test.cpp -o bin/test.o	
-
-bin/libgop.dll: bin/gop.o
-	$(CC) $(FLAGS) -shared bin/gop.o -o bin/libgop.dll	
 
 bin/gop.o: src/gop.cpp include/gop.hpp
 	$(CC) $(FLAGS) -I$(INCLUDES) -DBUILD_GOP_DLL -c src/gop.cpp -o bin/gop.o

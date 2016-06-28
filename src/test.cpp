@@ -30,7 +30,7 @@ float spfunc (const NodeSet& nodes, const std::vector<int>& path, int newNode){
 int main(){
 	string temp;
 
-	ifstream file("testcase/4china27.gop");
+	ifstream file("testcase/1att48.gop");//4china27
 	getline(file, temp);
 	stringstream init(temp);
 	//cout<<"test"<< temp << endl;

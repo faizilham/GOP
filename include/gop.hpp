@@ -4,14 +4,8 @@
 #include <vector>
 #include <functional>
 
-#ifdef BUILD_GOP_DLL
-#define GOP2PIADLL_API __declspec(dllexport)
-#else
-#define GOP2PIADLL_API __declspec(dllimport)
-#endif
-
 namespace GOP {
-	class GOP2PIADLL_API NodeSet{
+	class NodeSet{
 	private:
 		float *scores; // scores[node_id][score_elmt_id]
 	public:
@@ -24,7 +18,7 @@ namespace GOP {
 		void setScore(int node_id, int score_elmt_id, float score);
 	};
 
-	class GOP2PIADLL_API EdgeSet{
+	class EdgeSet{
 	private:
 		int num_nodes;
 		float* edges;
@@ -35,15 +29,15 @@ namespace GOP {
 		float getLength(int node1, int node2) const;
 	};
 
-	typedef GOP2PIADLL_API std::function<int(const NodeSet&, const std::vector<int>&)> scorefunc_t;
-	typedef GOP2PIADLL_API std::function<int(const NodeSet&, const std::vector<int>&,int)> spfunc_t;
+	typedef std::function<int(const NodeSet&, const std::vector<int>&)> scorefunc_t;
+	typedef std::function<int(const NodeSet&, const std::vector<int>&,int)> spfunc_t;
 
-	struct GOP2PIADLL_API ScoreFunction{
+	struct ScoreFunction{
 		std::function<float(const std::vector<int>&)> score; // NodeSet N, vector<int> path -> float score
 		std::function<float(const std::vector<int>&,int)> sp; // NodeSet N, vector<int> path, int newNode -> float projectedScore
 	};
 
-	class GOP2PIADLL_API Solution{
+	class Solution{
 	public:
 		float score, distance;
 		int distance_budget;
@@ -73,7 +67,7 @@ namespace GOP {
 		void pathTightening(std::vector<int>& unused_nodes, bool* used);
 	};
 
-	Solution GOP2PIADLL_API two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end, scorefunc_t scorefunc, spfunc_t spfunc);
+	Solution two_param_iterative_gop(int par_i, int par_t, int distance_budget, NodeSet& nodes, EdgeSet& edges, int start, int end, scorefunc_t scorefunc, spfunc_t spfunc);
 }
 
 #endif

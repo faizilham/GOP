@@ -155,8 +155,8 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 		/* (a) Randomly select i nodes (with repeats allowed), s.t. each is not in S and each is not e.
 		 	Store these i nodes in set L. If all nodes except e have been added	to S, then add e to the end and return the final solution.*/
 		if (available_nodes == 1){
-			path.push_back(end);
 			distance += edges->getLength(path.back(), end);
+			path.push_back(end);
 			return;
 		} else {
 			L.clear();
@@ -189,7 +189,7 @@ void GOP::Solution::process_gop(int par_i, int par_t, int start, int end){
 	}
 
 	// 4. Replace the last vertex in S with e.
-	path.pop_back(); used[end] = true;
+	used[path.back()] = false; path.pop_back();
 	distance = distance - last_distance + edges->getLength(path.back(), end);
 	path.push_back(end); used[end] = true;
 
